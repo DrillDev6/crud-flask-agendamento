@@ -1,22 +1,79 @@
-from flask import Flask
+from flask import Flask, request, jsonify
+from models.task import Task
+app = Flask(__name__)
 
-#__name__="__main__" sabemos assim que esta sendo executado de forma manual, não importado
+#CRUD = CREATE, READ, UPDATE, DELETE
 
-app = Flask(__name__)#variavel name é o nome do projeto
+#Tabela = task
+tasks = []
+task_id_control = 1
 
-@app.route("/")# decorador route, permite o a comunicação com o cliente, permite receba informações e devolvemos
-#"/" é a rota padrão para o acesso no navegador
-def hello_world():
-    return "Hello, World!"#função que executa e retorna um texto 
+@app.route ('/tasks', methods= ['POST'])
+#CREATE
+def create_task():
+    global task_id_control
+    data = request.get_json()
+    new_task = Task(id=task_id_control, title=data['title'], descriptions=data.get('descriptions'), completed=data.get('completed') )
+    #eu poderia acessar o title com title=data.get['title']
+    task_id_control += 1
+    tasks.append(new_task)
+    print (tasks)
+    return jsonify({"message": 'Nova tarefa criada com sucesso'})
 
-@app.route("/about")
-def about():
-    return "Pagina sobre flask"
-#As rotas são caminhos que o cliente pode acessar para obter informações do servidor
+@app.route('/tasks', methods=['GET'])
+#READ
+def get_tasks():
+    task_list = [task.to_dict() for task in tasks ]
+
+    output= {
+            "tasks": task_list,
+            "descripitions": 'descriptions',
+            "total_tasks": len(task_list)
+            }
+    return jsonify(output)
+
+@app.route('/tasks/<int:id>', methods=['GET'])
+#Chamar tarefa especifica
+def get_task(id):
+    for t in tasks:
+        if t.id == id:
+            return (t.to_dict())
+
+    return jsonify({"message": "Não foi possivel encontra a tarefa especificada"}), 404
+
+@app.route('/tasks/<int:id>', methods=['PUT'])
+#UPDATE
+def update_task(id):
+    task = None
+    for t in tasks:
+        if t.id == id:
+            task = t
+            break
+    print(task)
+    if task == None:
+        return jsonify({"message": "Não foi possivel encontrar a tarefa!"}), 404
+    print
+    data = request.get_json()
+    task.title = data['title']
+    task.descriptions = data['descriptions']
+    task.completed = data['completed']
+    print(task)
+    return jsonify ({"message": "Tarefa atualizada com sucesso"})
+
+@app.route('/tasks/<int:id>', methods=['DELETE'])
+def delete_task(id):
+    task = None
+    for t in tasks:
+        if t.id == id:
+            task = t
+            break
+    if task == None:
+        return jsonify({"message": "Não foi possivel encontrar a tarefa"}), 404
+
+    tasks.remove(task)
+    return jsonify({"message": "A tarefa foi deleteda com sucesso"})
 
 
-
-if __name__== "__main__":#garante que o arquivo é executado no servidor apenas de forma manual
-    app.run(debug=True)#isso faz com que o codigo rode localmente, a propriedade dubg vai nos mostrar as infomações importantes
-    
+if __name__ == "__main__":
+    app.run(debug=True)
 
